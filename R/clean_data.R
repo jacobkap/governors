@@ -1,61 +1,65 @@
 library(stringr)
-library(pdftools)
-library(dplyr)
-library(fastDummies)
+library(tidyverse)
+library(lubridate)
 setwd("data")
-source('C:/Users/user/Dropbox/R_project/us_governors/R/utils.R')
+load("raw_governors.rda")
+governors <- raw_governors
+governors$time_in_office <- gsub("\\n|\\t|\\s", "",
+                                 governors$time_in_office)
+governors$governor <- gsub("^Gov. ", "", governors$governor)
+# Splits rows with multiple times in offices to separate rows
+governors = governors %>%
+  mutate(time_in_office = strsplit(as.character(time_in_office),
+                                   "\\)\\(")) %>%
+  unnest(time_in_office)
+governors$time_in_office <- gsub("\\(|\\)", "", governors$time_in_office)
+governors$year_start <- as.numeric(str_split_fixed(governors$time_in_office,
+                                                   "-", 2)[, 1])
+governors$year_end <- as.numeric(str_split_fixed(governors$time_in_office,
+                                                 "-", 2)[, 2])
+# Governors still in office have NA for year_end
+governors$year_end[is.na(governors$year_end)] <- year(Sys.Date())
 
-# Read data from PDFs
-governors <- data.frame(stringsAsFactors = FALSE)
-files <- list.files()
-for (file in files) {
-  file_year <- as.numeric(gsub(".*(....).pdf", "\\1", file))
-  data <- pdftools::pdf_text(file)
-  if (data[1] != "") {
-    data <- data[1]
-    data <- unlist(strsplit(data, split = "\n"))
-    data <- trimws(data)
-    data <- data.frame(str_split_fixed(data, "\\s{2,}|e\\)", 6),
-                       stringsAsFactors = FALSE)
-    data <- data[data$X1 %in% state.name, ]
 
+# Sort governors data by year start.
+governors <- governors %>% arrange(year_end, year_start)
 
-    data[, 3:6] <- suppressWarnings(sapply(data[, 3:6], remove_paren))
-
-
-    # Year 2002 has a column (regular_term_in_years) that no other year has.
-    if (file_year == 2002) {
-      data[, 3] <- as.numeric(data[, 3])
-      start_month <- as.numeric(str_split_fixed(data[, 4], "-", 2)[, 1])
-      start_year <- as.numeric(str_split_fixed(data[, 4], "-", 2)[, 2])
-      end_year <- start_year + data[, 3]
-      end_year[end_year > 99] <- end_year[end_year > 99] - 100
-      end_year <- paste0("0", end_year)
-      data[, 3] <- paste0(start_month,"-", end_year)
-      data <- data[, c(1:2, 4, 3, 5:6)]
-    }
-
-    data$party <- str_split_fixed(data[, 2], "\\(", 2)[, 2]
-    data$party <- gsub("\\)", "", data$party)
-    data$party <- trimws(data$party)
-    data$party <- gsub("^D$", "Democrat", data$party)
-    data$party <- gsub("^R$", "Republican", data$party)
-    data$party <- gsub(".*Ind.*|^I$", "Independent", data$party,
-                       ignore.case = TRUE)
-    data[, 2] <- gsub("\\(.*", "", data[, 2])
-    names(data)[1:6] <- c("state",
-                          "governor",
-                          "present_term_began",
-                          "present_term_end",
-                          "num_previous_terms",
-                          "max_consecutive_terms")
-
-    data$year <- file_year
-    data$present_term_began <- two_to_four_years(data$present_term_began)
-    data$present_term_end <- two_to_four_years(data$present_term_end)
-
-    governors <- bind_rows(governors, data)
+# Makes a list containing all years (as a vector) that each
+# governor was governor for
+all_years <- vector("list", length = nrow(governors))
+for (i in 1:nrow(governors)) {
+  years <- NA
+  if (!is.na(governors$year_start[i]) &
+      !is.na(governors$year_end[i])) {
+    years <- governors$year_start[i]:governors$year_end[i]
   }
-
+  all_years[[i]] <- years
 }
+governors$years <- all_years
+
+
+
+# Make the new blank data.frame
+num_states <- length(unique(governors$state))
+num_years <- length(min(governors$year_start):max(governors$year_start))
+results <- data.frame(matrix(ncol = 4, nrow = num_years * num_states))
+names(results) <- c("governor", "state",
+                    "year", "party")
+results$state <- rep(unique(governors$state), num_years)
+results$year <- sort(rep(min(governors$year_start):max(governors$year_start), num_states))
+
+
+
+for (i in 1:nrow(governors)) {
+  gov <- governors$governor[i]
+  party <- governors$party[i]
+
+  results$governor[results$state %in% governors$state[i] &
+                     results$year %in% governors$years[[i]]] <- gov
+  results$party[results$state %in% governors$state[i] &
+                  results$year %in% governors$years[[i]]] <- party
+}
+results <- results[!is.na(results$governor), ]
+
+
 
