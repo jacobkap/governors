@@ -17,6 +17,7 @@ governors$year_start <- as.numeric(str_split_fixed(governors$time_in_office,
                                                    "-", 2)[, 1])
 governors$year_end <- as.numeric(str_split_fixed(governors$time_in_office,
                                                  "-", 2)[, 2])
+governors$governor <- gsub(" +", " ", governors$governor)
 # Governors still in office have NA for year_end
 governors$year_end[is.na(governors$year_end)] <- year(Sys.Date())
 
@@ -62,4 +63,43 @@ for (i in 1:nrow(governors)) {
 results <- results[!is.na(results$governor), ]
 
 
+parties <- c("Minnesota Independence Party" = "Independent",
+             "Alaska Independence Party"    = "Independent",
+             "^PDP of Puerto Rico$"         = "Popular Democratic Party (Puerto Rico)",
+             "^New Progressive Party of Puerto Rico \\(PNP\\)$" = "New Progressive Party (Puerto Rico)",
+             "^Popular Democrat$"           = "Popular Democratic Party (Puerto Rico)",
+             "^New Progressive Party$"      = "New Progressive Party (Puerto Rico)",
+             "^Democratic$"                 = "Democrat",
+             "^Democratic-Farmer-Labor$"    = "Democrat",
+             "Minnesota Independence Party" = "Independent",
+             "Republican Organizing Committee" = "Republican")
 
+results$party[results$year >= 1950] <- str_replace_all(results$party[results$year >= 1950],
+                                                      parties)
+results$party[results$governor == "Robert Martinez"] <- "Republican"
+results$party[results$governor == "Claude Roy Kirk"] <- "Republican"
+results$party[results$governor == "Ronald Wilson Reagan"] <- "Republican"
+results$party[results$governor == "John Sammon McKiernan"] <- "Democrat"
+results$party[results$governor == "Alfred Eastlack Driscoll"] <- "Republican"
+results$party[results$governor == "Dennis Joseph Roberts"] <- "Democrat"
+results$party[results$governor == "Patrick Joseph Lucey"] <- "Democrat"
+
+
+results$party[results$governor == "Forrest Hood James" &
+                      results$year %in% 1979:1982] <- "Democrat"
+results$party[results$governor == "Forrest Hood James" &
+                      results$year %in% 1995:1998] <- "Republican"
+results$party[results$governor == "Buddy Elson Roemer" &
+                      results$year %in% 1988:1990] <- "Democrat"
+results$party[results$governor == "Buddy Elson Roemer" &
+                      results$year %in% 1991] <- "Republican"
+results$party[results$governor == "Mills Edwin Godwin" &
+                      results$year %in% 1966:1969] <- "Democrat"
+results$party[results$governor == "Mills Edwin Godwin" &
+                      results$year %in% 1974:1977] <- "Republican"
+
+governors <- results
+governors <- governors %>% arrange(desc(year), state)
+rownames(governors) <- 1:nrow(governors)
+save(governors, file = "governors.rda")
+write_csv(governors, path = "governors.csv")
