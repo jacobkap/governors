@@ -3,7 +3,7 @@ setwd("data")
 # office, and party.
 # Each governor has one row of data.
 library(rvest)
-page <- read_html("https://www.nga.org/cms/FormerGovBios?begincac77e09-db17-41cb-9de0-687b843338d0=1&endcac77e09-db17-41cb-9de0-687b843338d0=3599&pagesizecac77e09-db17-41cb-9de0-687b843338d0=100&higherOfficesServed=&lastName=&sex=Any&honors=&submit=Search&college=&party=&inOffice=Any&biography=&militaryService=&religion=&firstName=&warsServed=&")
+page <- read_html("https://classic.nga.org/cms/FormerGovBios?begincac77e09-db17-41cb-9de0-687b843338d0=1&endcac77e09-db17-41cb-9de0-687b843338d0=3599&pagesizecac77e09-db17-41cb-9de0-687b843338d0=100&higherOfficesServed=&lastName=&sex=Any&honors=&submit=Search&college=&party=&inOffice=Any&biography=&militaryService=&religion=&firstName=&warsServed=&")
 
 raw_governors <- page %>%
   html_node("body > main > div:nth-child(3) > div > div > div > table") %>%
