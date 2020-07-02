@@ -3,11 +3,13 @@ setwd("data")
 # office, and party.
 # Each governor has one row of data.
 library(rvest)
-page <- read_html("https://classic.nga.org/cms/FormerGovBios?begincac77e09-db17-41cb-9de0-687b843338d0=1&endcac77e09-db17-41cb-9de0-687b843338d0=3599&pagesizecac77e09-db17-41cb-9de0-687b843338d0=100&higherOfficesServed=&lastName=&sex=Any&honors=&submit=Search&college=&party=&inOffice=Any&biography=&militaryService=&religion=&firstName=&warsServed=&")
+library(dplyr)
+library(janitor)
+page <- read_html("https://www.nga.org/former-governors/search/?govq_name=&govq_state=&govq_keyword=&govq_party_affiliation=&govq_birth_state=&govq_school=&govq_awards=&govq_military_service=&govq_status=&govq_profession=&govq_gender=&govq_race=&govq_natl_office_served=&govq_terms=")
 
 raw_governors <- page %>%
-  html_node("body > main > div:nth-child(3) > div > div > div > table") %>%
-  html_table(header = TRUE)
-names(raw_governors) <- c("governor", "state",
-                      "time_in_office", "party")
+  html_node(".table__container > table:nth-child(1)") %>%
+  html_table(header = TRUE) %>%
+  dplyr::rename_all(janitor::make_clean_names) %>%
+  dplyr::rename(governor = governors_name)
 save(raw_governors, file = "raw_governors.rda")
