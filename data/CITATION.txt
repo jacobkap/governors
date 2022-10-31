@@ -1,0 +1,7 @@
+@article{kaplan_governors,
+  title{United States Governors 1775-2020},
+  author={Kaplan, Jacob},
+  year={2022}
+}
+
+
